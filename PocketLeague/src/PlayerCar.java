@@ -6,7 +6,6 @@ public class PlayerCar extends Rectangle
 	PlayerCar(int width, int height)
 	{
 		super(width,height);
-		setFill(Color.BROWN);
+		setFill(Color.RED);
 	}
-
 }
