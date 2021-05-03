@@ -7,6 +7,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.transform.Rotate;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -25,16 +27,22 @@ import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.event.ActionEvent;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
+
+import javafx.animation.AnimationTimer;
 import javafx.animation.KeyFrame;
+import javafx.scene.Parent;
 import javafx.animation.PathTransition;
 import javafx.util.Duration;
-import javafx.scene.media.Media;  
-import javafx.scene.media.MediaPlayer;  
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 
 public class Main extends Application
 {
+	private static final double W = 720.0;
+	private static final double H = 960.0;
 	private Scene mainScene;
 	private Stage primaryStage;
 	private Pane pane;
@@ -43,21 +51,28 @@ public class Main extends Application
 	private Ball ball;
 	private ScoreBoard scoreboard;
 	private Arena background;
-	
+
 	private Text playerscore;
 	private Text opponentscore;
 
 	private PlayerCar opponentcar;
-	private Line opponentpath;
-	private PathTransition opponenttransition;
+
+	private Shape playerintersect;
+	private Shape opponentintersect;
+	private Bounds bounds;
 
 	private Timeline ballmovement;
+	private AnimationTimer ballmovements;
+
+	//Playercar Variables for movement
+	boolean running, goNorth, goSouth, goEast, goWest;
+	//Opponentcar Variables for movement
+	boolean runnings, goNorths, goSouths, goEasts, goWests;
 
 	@Override
 	public void start(Stage primaryStage) throws Exception
 	{
 		music();
-		goalSound();
 		this.primaryStage = primaryStage;
 
 		// Setup the main stage
@@ -69,7 +84,7 @@ public class Main extends Application
 		background = new Arena();
 		scoreboard = new ScoreBoard();
 		pane.getChildren().add(background.getIv());
-	
+
 		// Create group
 		Group g = new Group(); //hold ball and stick
 		pane.getChildren().add(g);
@@ -82,31 +97,18 @@ public class Main extends Application
 
 		// Create Players Car
 		playercar = new PlayerCar(31, 61);
-		playercar.relocate(mainScene.getWidth()/2-playercar.getWidth()/2f, mainScene.getHeight()-playercar.getHeight()-50);
+		playercar.relocate(mainScene.getWidth()/2-playercar.getWidth()/2f, mainScene.getHeight()-playercar.getHeight()-160);
 		playercar.setCursor(Cursor.HAND);
 		playercar.setOnMouseDragged(playerMouseDrag);
 		g.getChildren().add(playercar);
 
-		//Create opponent stick and path
-		opponentcar = new PlayerCar(31,61);
+		//Create Opponent car
+		opponentcar = new PlayerCar(31, 61);
 		opponentcar.setFill(Color.BLUE);
-		opponentcar.relocate(
-				mainScene.getX()+opponentcar.getWidth()/2f,
-				mainScene.getY() + opponentcar.getHeight()+15);
+		opponentcar.relocate(mainScene.getWidth()/2-playercar.getWidth()/2f, mainScene.getHeight()-playercar.getHeight()-750);
+		opponentcar.setCursor(Cursor.HAND);
+		opponentcar.setOnMouseDragged(playerMouseDrag);
 		g.getChildren().add(opponentcar);
-
-		opponentpath = new Line(opponentcar.getX(),50,720-opponentcar.getWidth(),50);
-		opponentpath.setVisible(false);
-		g.getChildren().add(opponentpath);
-
-		//Set Path Transition (follow this path essentially)
-		opponenttransition = new PathTransition();
-		opponenttransition.setNode(opponentcar);
-		opponenttransition.setPath(opponentpath); 	//sets path node should follow
-		opponenttransition.setDuration(Duration.millis(2000));		//Uses duration class to set time of animation
-		opponenttransition.setCycleCount(Timeline.INDEFINITE);      //Sets amount of cycles animation will complete
-		opponenttransition.autoReverseProperty().set(true);
-		opponenttransition.play();
 
 		// Create Title text
 		Text title = new Text("Welcome to Pocket League");
@@ -118,20 +120,23 @@ public class Main extends Application
 
 		// Create player score
 		playerscore = new Text("Player Score: " + scoreboard.getPlayerscore());
-		playerscore.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
-		playerscore.setLayoutX(50);
-		playerscore.setLayoutY(50);
+		playerscore.setFont(Font.font("Tahoma", FontWeight.BOLD, 20));
+		playerscore.setFill(Color.WHITE);
+		playerscore.setLayoutX(40);
+		playerscore.setLayoutY(30);
 
 		// Create opponent score
 		opponentscore = new Text("Opponent Score: " + scoreboard.getOpponentscore());
-		opponentscore.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
-		opponentscore.setLayoutX(50);
-		opponentscore.setLayoutY(70);
+		opponentscore.setFont(Font.font("Tahoma", FontWeight.BOLD, 20));
+		opponentscore.setFill(Color.WHITE);
+		opponentscore.setLayoutX(40);
+		opponentscore.setLayoutY(50);
+
 
 		//Reset button
 		Hyperlink reset = new Hyperlink("Reset");
-		reset.setLayoutX(50);
-		reset.setLayoutY(90);
+		reset.setLayoutX(40);
+		reset.setLayoutY(60);
 		reset.setOnAction(new EventHandler<ActionEvent>()
 		{
 			@Override
@@ -162,13 +167,23 @@ public class Main extends Application
 		}));
 		ballmovement.setCycleCount(Timeline.INDEFINITE);
 
-		// New game button
-		Button newgame = new Button("New Game");
-		Platform.runLater(() -> 
+		//Tried making a ballmovement an animationTimer instead of Timeline to fix kickoff issue, but no avail :(
+		ballmovements = new AnimationTimer()
+		{
+			@Override
+			public void handle(long now)
+			{
+				step();
+			}
+		};
+
+		Button newgame = new Button("Start Game");
+		Platform.runLater(() ->
 		{
 			newgame.setLayoutX(pane.getWidth()/2-newgame.getWidth()/2);
 			newgame.setLayoutY(640);
 		});
+
 		pane.getChildren().add(newgame);
 		newgame.setOnAction(new EventHandler<ActionEvent> ()
 		{
@@ -180,13 +195,137 @@ public class Main extends Application
 				scoreboard.setOpponentscore(0);
 				scoreboard.setPlayerscore(0);
 				reset();
-				ballmovement.play();
+				System.out.println("Button was pressed");
 				pane.getChildren().addAll(playerscore, opponentscore,reset);
-
 			}
 		});
+
+		//Car Movements
+		AnimationTimer timer = new AnimationTimer()
+		{
+            @Override
+            public void handle(long now)
+            {
+                double dx = 0.0, dy = 0.0;
+                double dxz = 0.0, dyz = 0.0;
+
+                if (goNorth) dy -= 1.2;
+                if (goNorths) dyz -= 1.2;
+
+                if (goSouth) dy += 1.2;
+                if (goSouths) dyz += 1.2;
+
+                if (goEast)  dx += 1.2;
+                if (goEasts) dxz += 1.2;
+
+                if (goWest)  dx -= 1.2;
+                if (goWests) dxz -= 1.2;
+
+                if (running) {dx *= 3; dy *= 3;}
+                if (runnings) {dxz *= 3; dyz *= 3;}
+
+                movePlayerCarBy(dx, dy);
+                moveOpponentCarBy(dxz, dyz);
+            }
+        };
+
+        mainScene.setOnKeyReleased(new EventHandler<KeyEvent>()
+        {
+        	@Override
+        	public void handle(KeyEvent event)
+        	{
+        		switch (event.getCode())
+        		{
+                	case UP:
+                		System.out.println("UP released!");
+                		goNorth = false;
+                		break;
+                	case W:
+                		System.out.println("W released!");
+                		goNorths = false;
+                		break;
+                	case DOWN:
+                		System.out.println("DOWN released!");
+                		goSouth = false;
+                		break;
+                	case S:
+                		System.out.println("S released!");
+                		goSouths = false;
+                		break;
+                	case LEFT:
+                		System.out.println("LEFT released!");
+                		goWest  = false;
+                		break;
+                	case A:
+                		System.out.println("A released!");
+                		goWests = false;
+                		break;
+                	case RIGHT:
+                		System.out.println("RIGHT released!");
+                		goEast = false;
+                		break;
+                	case D:
+                		System.out.println("D released!");
+                		goEasts = false;
+                		break;
+                	case SHIFT:
+                		System.out.println("SHIFT released!");
+                		running = false;
+                		break;
+        		}
+        	}
+        });
+
+        mainScene.setOnKeyPressed(new EventHandler<KeyEvent>()
+        {
+        	@Override
+        	public void handle(KeyEvent event)
+        	{
+        		switch (event.getCode())
+        		{
+           			case UP:
+           				System.out.println("UP Pressed!");
+           				goNorth = true;
+           				break;
+           			case W:
+           				System.out.println("W Pressed!");
+           				goNorths = true;
+           				break;
+           			case DOWN:
+           				System.out.println("DOWN Pressed!");
+           				goSouth = true;
+           				break;
+           			case S:
+           				System.out.println("S Pressed");
+           				goSouths = true;
+           				break;
+           			case LEFT:
+           				System.out.println("LEFT Pressed!");
+           				goWest  = true;
+           				break;
+           			case A:
+           				System.out.println("A Pressed!");
+           				goWests = true;
+           				break;
+           			case RIGHT:
+           				System.out.println("RIGHT Pressed!");
+           				goEast = true;
+           				break;
+           			case D:
+           				System.out.println("D Pressed!");
+           				goEasts = true;
+           				break;
+           			case SHIFT:
+           				System.out.println("SHIFT Pressed!");
+           				running = true;
+           				break;
+        		}
+        	}
+        });
+     timer.start();
 	}
 
+	//Main duh
 	public static void main(String[] args)
 	{
 		launch();
@@ -195,17 +334,17 @@ public class Main extends Application
 	/**
 	 * This is the main games step loop. All of the game logic happens here.
 	 */
+
 	private void step()
 	{
 		ball.step();
 
-		Bounds bounds = pane.getBoundsInLocal();
-		Shape playerintersect = Shape.intersect(ball, playercar);
-		Shape opponentintersect = Shape.intersect(ball, opponentcar);
+		bounds = pane.getBoundsInLocal();
+		playerintersect = Shape.intersect(ball, playercar);
+		opponentintersect = Shape.intersect(ball, opponentcar);
 
 		//If the ball reaches right or left boundary, bounce ball
-		if(ball.getLayoutX() <= (bounds.getMinX() + ball.getRadius()) ||
-				ball.getLayoutX() >= (bounds.getMaxX() - ball.getRadius()) )
+		if(ball.getLayoutX() <= (bounds.getMinX() + ball.getRadius()) || ball.getLayoutX() >= (bounds.getMaxX() - ball.getRadius()))
 		{
 			ball.hitHorizontal();
 		}
@@ -215,46 +354,56 @@ public class Main extends Application
 		{
 			scoreboard.setPlayerscore(scoreboard.getPlayerscore()+1);
 			ballmovement.pause();
+			ballmovements.stop();
 			ball.relocate(mainScene.getWidth()/2-ball.getRadius(), mainScene.getHeight()/2-ball.getRadius()/2f);
 			ball.vertical = Math.abs(ball.vertical);
+			System.out.println("Red team scored!");
+			goalSound();
 			reset();
 		}
 
 		//If the ball reaches the bottom, give opponent a point
-		if(ball.getLayoutY() == (bounds.getMaxY() - ball.getRadius())) 
+		if(ball.getLayoutY() == (bounds.getMaxY() - ball.getRadius()))
 		{
 			scoreboard.setOpponentscore(scoreboard.getOpponentscore()+1);
 			ballmovement.pause();
+			ballmovements.stop();
 			ball.relocate(mainScene.getWidth()/2-ball.getRadius(), mainScene.getHeight()/2-ball.getRadius()/2f);
 			ball.vertical = Math.abs(ball.vertical);
+			System.out.println("Blue team Scored!");
+			goalSound();
 			reset();
 		}
 
-		// Ball hits playercar
-		if(playerintersect.getBoundsInLocal().getWidth() != -1) 
+		// Ball hits PlayerCar
+		if(playerintersect.getBoundsInLocal().getWidth() != -1)
 		{
+			System.out.println("Red team touched the ball!");
 			ball.hitVertical();
+
 		}
 
-		//Ball hits opponentcar
-		if(opponentintersect.getBoundsInLocal().getWidth() != -1) 
+		//Ball hits OpponentCar
+		if(opponentintersect.getBoundsInLocal().getWidth() != -1)
 		{
+			System.out.println("Blue team touched the ball!");
 			ball.hitVertical();
 		}
 
 		//If player score reaches 10, reset game and display winning screen
-		if(scoreboard.getPlayerscore() == 10) 
+		if(scoreboard.getPlayerscore() == 10)
 		{
 			playerwin();
 			reset();
 		}
 
 		//If opponent score reaches 10, reset game and display loser screen
-		if(scoreboard.getOpponentscore() == 10) 
+		if(scoreboard.getOpponentscore() == 10)
 		{
 			opponentwin();
 			reset();
 		}
+
 		// Update score text
 		playerscore.setText("Player Score: " + scoreboard.getPlayerscore());
 		opponentscore.setText("Opponent Score: " + scoreboard.getOpponentscore());
@@ -267,46 +416,88 @@ public class Main extends Application
 	 * @param max
 	 * @return
 	 */
-	
-	private double clamp( double value, double min, double max ) 
+
+	private double clamp(double value, double min, double max)
 	{
 		return Math.max(min, Math.min(max, value));
 	}
-    
-	// Animation Events
+
+	//Animation Events
 	EventHandler<MouseEvent> playerMouseDrag = new EventHandler<MouseEvent> ()
 	{
 		@Override
-		public void handle(MouseEvent m) 
+		public void handle(MouseEvent m)
 		{
 			Rectangle r = ((Rectangle)(m.getSource()));
 			double setX = (m.getScreenX()-primaryStage.getX()) - r.getWidth()/2;
 			double setY = (m.getScreenY()-primaryStage.getY()) - r.getHeight();
-			
+
 			// Don't let the paddle outside of the screen!
-			setX = clamp( setX, 0, mainScene.getWidth()-r.getWidth());
-			setY = clamp( setY, 0, mainScene.getHeight()-r.getHeight());
-			
+			setX = clamp(setX, 0, mainScene.getWidth()-r.getWidth());
+			setY = clamp(setY, 0, mainScene.getHeight()-r.getHeight());
+
 			// Update position
 			r.relocate(setX, setY);
-			
+
 			//Play the animation
 			ballmovement.play();
 		}
+	};
 
-	};
-	
-	EventHandler<KeyEvent> keyPressed = new EventHandler<KeyEvent> ()
+	//Playercar Movement
+	private void movePlayerCarBy(double dx, double dy)
 	{
-		@Override
-		public void handle(KeyEvent e)
-		{
-			System.out.println("You pressed a key");
-		}
-	};
+        if (dx == 0.0 && dy == 0.0)
+        	return;
+
+        double cx = playercar.getBoundsInLocal().getWidth()  / 2.0;
+        double cy = playercar.getBoundsInLocal().getHeight() / 2.0;
+
+        double x = cx + playercar.getLayoutX() + dx;
+        double y = cy + playercar.getLayoutY() + dy;
+
+        movePlayerCarTo(x, y);
+    }
+
+	private void movePlayerCarTo(double x, double y)
+	{
+        double cx = playercar.getBoundsInLocal().getWidth()  / 2.0;
+        double cy = playercar.getBoundsInLocal().getHeight() / 2.0;
+
+        if (x - cx >= 0 && x + cx <= W && y - cy >= 0 && y + cy <= H)
+        {
+            playercar.relocate(x - cx, y - cy);
+        }
+	}
+
+	//OpponentCar Movement
+	private void moveOpponentCarBy(double dx, double dy)
+	{
+        if (dx == 0.0 && dy == 0.0)
+        	return;
+
+        double cx = opponentcar.getBoundsInLocal().getWidth()  / 2.0;
+        double cy = opponentcar.getBoundsInLocal().getHeight() / 2.0;
+
+        double x = cx + opponentcar.getLayoutX() + dx;
+        double y = cy + opponentcar.getLayoutY() + dy;
+
+        moveOpponentCarTo(x, y);
+    }
+
+	private void moveOpponentCarTo(double x, double y)
+	{
+        double cx = opponentcar.getBoundsInLocal().getWidth()  / 2.0;
+        double cy = opponentcar.getBoundsInLocal().getHeight() / 2.0;
+
+        if (x - cx >= 0 && x + cx <= W && y - cy >= 0 && y + cy <= H)
+        {
+            opponentcar.relocate(x - cx, y - cy);
+        }
+	}
 
 	//Reset positions
-	public void reset() 
+	public void reset()
 	{
 		//Display new scores
 		playerscore.setText("Player Score: " + scoreboard.getPlayerscore());
@@ -316,31 +507,26 @@ public class Main extends Application
 		ball.relocate(mainScene.getWidth()/2-ball.getRadius(), mainScene.getHeight()/2-ball.getRadius()/2f);
 		ballmovement.pause();
 
-		//Reset paddle positions
-		playercar.relocate(
-				mainScene.getWidth()/2-playercar.getWidth()/2f,
-				mainScene.getHeight()-playercar.getHeight()-50
-		);
-		opponentcar.relocate(
-				mainScene.getX()+opponentcar.getWidth()/2f,
-				mainScene.getY() + opponentcar.getHeight()+15
-				);
+		//Reset car positions
+		playercar.relocate(mainScene.getWidth()/2-playercar.getWidth()/2f, mainScene.getHeight() - playercar.getHeight()-160);
+		opponentcar.relocate(mainScene.getX()+341, opponentcar.getHeight()+88);
+
+		System.out.println("Game has been reset!");
 	}
 
 	//Player win
-	public void playerwin() 
+	public void playerwin()
 	{
 		HBox winbox = new HBox(10);
 
 		Scene win = new Scene(winbox,200,100);
 
-		Text winner = new Text("You win! :)");
+		Text winner = new Text("Red Team wins!");
 		winner.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
 		winner.setTextAlignment(TextAlignment.CENTER);
 		winner.setLayoutX(100);
 		winner.setLayoutY(50);
 		winbox.getChildren().add(winner);
-
 
 		Stage secondaryStage = new Stage();
 		secondaryStage.setTitle("You win!");
@@ -352,13 +538,13 @@ public class Main extends Application
 	}
 
 	//Opponent win
-	public void opponentwin() 
+	public void opponentwin()
 	{
 		HBox losebox = new HBox(10);
 
 		Scene lose = new Scene(losebox,150,150);
 
-		Text loser = new Text("You Lose! :(");
+		Text loser = new Text("Blue Team Wins!");
 		loser.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
 		loser.setTextAlignment(TextAlignment.CENTER);
 
@@ -372,7 +558,8 @@ public class Main extends Application
 		scoreboard.setOpponentscore(0);
 		scoreboard.setPlayerscore(0);
 	}
-	
+
+
 	MediaPlayer music;
 	public void music()
 	{
@@ -381,13 +568,14 @@ public class Main extends Application
 		music = new MediaPlayer(h);
 		music.play();
 	}
-	
+
 	MediaPlayer goalSound;
 	public void goalSound()
 	{
 		String s = "sfx/goalExplosion.mp3";
 		Media h = new Media(Paths.get(s).toUri().toString());
 		goalSound = new MediaPlayer(h);
+		System.out.println("BWAHHH");
 		goalSound.play();
 	}
 }

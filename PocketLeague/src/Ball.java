@@ -2,8 +2,8 @@ import javafx.scene.shape.Circle;
 
 public class Ball extends Circle
 {
-	double horizontal = 5; 
-	double vertical = 3; 
+	double horizontal = 5.0; 
+	double vertical = 3.0; 
 	
 	Ball(double radius)
 	{
@@ -12,12 +12,12 @@ public class Ball extends Circle
 
 	public boolean isRight() 
 	{
-		return horizontal > 0;
+		return horizontal > 0.0;
 	}
 
 	public boolean isDown() 
 	{
-		return vertical > 0;
+		return vertical > 0.0;
 	}
 	
 	public void hitHorizontal() 
