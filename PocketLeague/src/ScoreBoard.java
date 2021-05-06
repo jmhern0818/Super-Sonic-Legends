@@ -1,10 +1,10 @@
-
 public class ScoreBoard 
 {
 	int playerscore;
 	int opponentscore;
 	
-	ScoreBoard(){
+	ScoreBoard()
+	{
 		this.playerscore = 0;
 		this.opponentscore = 0;
 	}
@@ -28,6 +28,4 @@ public class ScoreBoard
 	{
 		this.opponentscore = opponentscore;
 	}
-
-
 }

@@ -29,7 +29,7 @@ import javafx.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-
+import com.almasb.fxgl.physics.box2d.dynamics.FixtureDef;
 import javafx.animation.AnimationTimer;
 import javafx.animation.KeyFrame;
 import javafx.scene.Parent;
@@ -38,6 +38,31 @@ import javafx.util.Duration;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
+import com.almasb.fxgl.app.GameApplication;
+import com.almasb.fxgl.app.GameSettings;
+import com.almasb.fxgl.dsl.FXGL;
+import com.almasb.fxgl.physics.BoundingShape;
+import com.almasb.fxgl.physics.HitBox;
+import com.almasb.fxgl.physics.box2d.collision.shapes.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+///////
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import javafx.animation.AnimationTimer;
+import javafx.application.Application;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.stage.Stage;
+///////
 
 public class Main extends Application
 {
@@ -60,7 +85,7 @@ public class Main extends Application
 	private Shape playerintersect;
 	private Shape opponentintersect;
 	private Bounds bounds;
-
+	
 	private Timeline ballmovement;
 	private AnimationTimer ballmovements;
 
@@ -68,12 +93,19 @@ public class Main extends Application
 	boolean running, goNorth, goSouth, goEast, goWest;
 	//Opponentcar Variables for movement
 	boolean runnings, goNorths, goSouths, goEasts, goWests;
+	
+	boolean kickOff = false;
+	boolean redTouched = false;
+	boolean blueTouched = false;
 
 	@Override
 	public void start(Stage primaryStage) throws Exception
 	{
 		music();
 		this.primaryStage = primaryStage;
+	//	bounds = pane.getBoundsInLocal();
+		//playerintersect = Shape.intersect(ball, playercar);
+		//opponentintersect = Shape.intersect(ball, opponentcar);
 
 		// Setup the main stage
 		pane = new Pane();
@@ -92,22 +124,26 @@ public class Main extends Application
 		// Create ball (game object)
 		ball = new Ball(20);
 		ball.setFill(Color.GREY);
+		//ball.relocate(mainScene.getWidth()/2, mainScene.getHeight()/2);
 		ball.relocate(mainScene.getWidth()/2-ball.getRadius(), mainScene.getHeight()/2-ball.getRadius()/2f);
 		g.getChildren().add(ball);
+		
+		// Create Ball (Physics)
+		
 
 		// Create Players Car
 		playercar = new PlayerCar(31, 61);
 		playercar.relocate(mainScene.getWidth()/2-playercar.getWidth()/2f, mainScene.getHeight()-playercar.getHeight()-160);
-		playercar.setCursor(Cursor.HAND);
-		playercar.setOnMouseDragged(playerMouseDrag);
+		//playercar.setCursor(Cursor.HAND);
+		//playercar.setOnMouseDragged(playerMouseDrag);
 		g.getChildren().add(playercar);
 
 		//Create Opponent car
 		opponentcar = new PlayerCar(31, 61);
-		opponentcar.setFill(Color.BLUE);
+		opponentcar.setFill(Color.RED);
 		opponentcar.relocate(mainScene.getWidth()/2-playercar.getWidth()/2f, mainScene.getHeight()-playercar.getHeight()-750);
-		opponentcar.setCursor(Cursor.HAND);
-		opponentcar.setOnMouseDragged(playerMouseDrag);
+		//opponentcar.setCursor(Cursor.HAND);
+		//opponentcar.setOnMouseDragged(playerMouseDrag);
 		g.getChildren().add(opponentcar);
 
 		// Create Title text
@@ -131,7 +167,6 @@ public class Main extends Application
 		opponentscore.setFill(Color.WHITE);
 		opponentscore.setLayoutX(40);
 		opponentscore.setLayoutY(50);
-
 
 		//Reset button
 		Hyperlink reset = new Hyperlink("Reset");
@@ -177,6 +212,8 @@ public class Main extends Application
 			}
 		};
 
+		
+		//New game button
 		Button newgame = new Button("Start Game");
 		Platform.runLater(() ->
 		{
@@ -199,31 +236,32 @@ public class Main extends Application
 				pane.getChildren().addAll(playerscore, opponentscore,reset);
 			}
 		});
-
+		
 		//Car Movements
 		AnimationTimer timer = new AnimationTimer()
 		{
             @Override
             public void handle(long now)
             {
+
                 double dx = 0.0, dy = 0.0;
                 double dxz = 0.0, dyz = 0.0;
 
-                if (goNorth) dy -= 1.2;
-                if (goNorths) dyz -= 1.2;
+                if (goNorth) dy -= 2.0;
+                if (goNorths) dyz -= 2.0;
 
-                if (goSouth) dy += 1.2;
-                if (goSouths) dyz += 1.2;
+                if (goSouth) dy += 2.0;
+                if (goSouths) dyz += 2.0;
 
-                if (goEast)  dx += 1.2;
-                if (goEasts) dxz += 1.2;
+                if (goEast)  dx += 2.0;
+                if (goEasts) dxz += 2.0;
 
-                if (goWest)  dx -= 1.2;
-                if (goWests) dxz -= 1.2;
+                if (goWest)  dx -= 2.0;
+                if (goWests) dxz -= 2.0;
 
                 if (running) {dx *= 3; dy *= 3;}
                 if (runnings) {dxz *= 3; dyz *= 3;}
-
+                	
                 movePlayerCarBy(dx, dy);
                 moveOpponentCarBy(dxz, dyz);
             }
@@ -285,6 +323,7 @@ public class Main extends Application
         		{
            			case UP:
            				System.out.println("UP Pressed!");
+           				ballmovement.play();
            				goNorth = true;
            				break;
            			case W:
@@ -297,6 +336,7 @@ public class Main extends Application
            				break;
            			case S:
            				System.out.println("S Pressed");
+           				ballmovement.play();
            				goSouths = true;
            				break;
            			case LEFT:
@@ -322,10 +362,10 @@ public class Main extends Application
         		}
         	}
         });
-     timer.start();
+        timer.start();
 	}
-
-	//Main duh
+	
+	//Main
 	public static void main(String[] args)
 	{
 		launch();
@@ -342,7 +382,7 @@ public class Main extends Application
 		bounds = pane.getBoundsInLocal();
 		playerintersect = Shape.intersect(ball, playercar);
 		opponentintersect = Shape.intersect(ball, opponentcar);
-
+		
 		//If the ball reaches right or left boundary, bounce ball
 		if(ball.getLayoutX() <= (bounds.getMinX() + ball.getRadius()) || ball.getLayoutX() >= (bounds.getMaxX() - ball.getRadius()))
 		{
@@ -361,7 +401,7 @@ public class Main extends Application
 			goalSound();
 			reset();
 		}
-
+		
 		//If the ball reaches the bottom, give opponent a point
 		if(ball.getLayoutY() == (bounds.getMaxY() - ball.getRadius()))
 		{
@@ -374,13 +414,14 @@ public class Main extends Application
 			goalSound();
 			reset();
 		}
-
+		
 		// Ball hits PlayerCar
 		if(playerintersect.getBoundsInLocal().getWidth() != -1)
 		{
 			System.out.println("Red team touched the ball!");
 			ball.hitVertical();
-
+			kickOff = true;
+			redTouched = true;
 		}
 
 		//Ball hits OpponentCar
@@ -388,6 +429,7 @@ public class Main extends Application
 		{
 			System.out.println("Blue team touched the ball!");
 			ball.hitVertical();
+			kickOff = true;
 		}
 
 		//If player score reaches 10, reset game and display winning screen
@@ -558,8 +600,7 @@ public class Main extends Application
 		scoreboard.setOpponentscore(0);
 		scoreboard.setPlayerscore(0);
 	}
-
-
+	
 	MediaPlayer music;
 	public void music()
 	{
