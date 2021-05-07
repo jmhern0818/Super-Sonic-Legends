@@ -1,16 +1,10 @@
 import javafx.scene.shape.Circle;
-import com.almasb.fxgl.app.GameApplication;
-import com.almasb.fxgl.app.GameSettings;
-import com.almasb.fxgl.dsl.FXGL;
-import com.almasb.fxgl.physics.BoundingShape;
-import com.almasb.fxgl.physics.HitBox;
-import com.almasb.fxgl.physics.PhysicsComponent;
-import com.almasb.fxgl.physics.box2d.collision.shapes.*;
-//import dev.DeveloperWASDControl;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-
-public class Ball extends Circle
+/**
+ * This is the Ball class. This class implements Circle so that we may
+ * have a ball for our players to hit and score. The Circle object makes hit detection
+ * easy and reliable.
+ */
+ class Ball extends Circle
 {
 	double horizontal = 4.0; 
 	double vertical = 2.0; 

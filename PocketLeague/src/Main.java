@@ -29,7 +29,6 @@ import javafx.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import com.almasb.fxgl.physics.box2d.dynamics.FixtureDef;
 import javafx.animation.AnimationTimer;
 import javafx.animation.KeyFrame;
 import javafx.scene.Parent;
@@ -38,12 +37,7 @@ import javafx.util.Duration;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
-import com.almasb.fxgl.app.GameApplication;
-import com.almasb.fxgl.app.GameSettings;
-import com.almasb.fxgl.dsl.FXGL;
-import com.almasb.fxgl.physics.BoundingShape;
-import com.almasb.fxgl.physics.HitBox;
-import com.almasb.fxgl.physics.box2d.collision.shapes.*;
+
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 ///////
@@ -63,9 +57,17 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 ///////
-
+/**
+ * This is the main class. This holds all of the game logic and implements
+ * the classes to create our game!
+ * @author Jose Hernandez
+ * @author Alex Olivarez
+ * @author Ivan Castro
+ * @author Sebastian Castellanos
+ */
 public class Main extends Application
 {
+	//declaring variables
 	private static final double W = 720.0;
 	private static final double H = 960.0;
 	private Scene mainScene;
@@ -97,7 +99,10 @@ public class Main extends Application
 	boolean kickOff = false;
 	boolean redTouched = false;
 	boolean blueTouched = false;
-
+	/**
+	   * This creates the main stage/visuals for gameplay 
+	   * as well as the controls (WASD AND ARROW KEYS).
+	   */
 	@Override
 	public void start(Stage primaryStage) throws Exception
 	{
@@ -201,7 +206,7 @@ public class Main extends Application
 			}
 		}));
 		ballmovement.setCycleCount(Timeline.INDEFINITE);
-
+		
 		//Tried making a ballmovement an animationTimer instead of Timeline to fix kickoff issue, but no avail :(
 		ballmovements = new AnimationTimer()
 		{
@@ -232,7 +237,7 @@ public class Main extends Application
 				scoreboard.setOpponentscore(0);
 				scoreboard.setPlayerscore(0);
 				reset();
-				System.out.println("Button was pressed");
+				//System.out.println("Button was pressed");
 				pane.getChildren().addAll(playerscore, opponentscore,reset);
 			}
 		});
@@ -275,39 +280,39 @@ public class Main extends Application
         		switch (event.getCode())
         		{
                 	case UP:
-                		System.out.println("UP released!");
+                		//System.out.println("UP released!");
                 		goNorth = false;
                 		break;
                 	case W:
-                		System.out.println("W released!");
+                		//System.out.println("W released!");
                 		goNorths = false;
                 		break;
                 	case DOWN:
-                		System.out.println("DOWN released!");
+                		//System.out.println("DOWN released!");
                 		goSouth = false;
                 		break;
                 	case S:
-                		System.out.println("S released!");
+                		//System.out.println("S released!");
                 		goSouths = false;
                 		break;
                 	case LEFT:
-                		System.out.println("LEFT released!");
+                		//System.out.println("LEFT released!");
                 		goWest  = false;
                 		break;
                 	case A:
-                		System.out.println("A released!");
+                		//System.out.println("A released!");
                 		goWests = false;
                 		break;
                 	case RIGHT:
-                		System.out.println("RIGHT released!");
+                		//System.out.println("RIGHT released!");
                 		goEast = false;
                 		break;
                 	case D:
-                		System.out.println("D released!");
+                		//System.out.println("D released!");
                 		goEasts = false;
                 		break;
                 	case SHIFT:
-                		System.out.println("SHIFT released!");
+                		//System.out.println("SHIFT released!");
                 		running = false;
                 		break;
         		}
@@ -322,41 +327,41 @@ public class Main extends Application
         		switch (event.getCode())
         		{
            			case UP:
-           				System.out.println("UP Pressed!");
+           				//System.out.println("UP Pressed!");
            				ballmovement.play();
            				goNorth = true;
            				break;
            			case W:
-           				System.out.println("W Pressed!");
+           				//System.out.println("W Pressed!");
            				goNorths = true;
            				break;
            			case DOWN:
-           				System.out.println("DOWN Pressed!");
+           				//System.out.println("DOWN Pressed!");
            				goSouth = true;
            				break;
            			case S:
-           				System.out.println("S Pressed");
+           				//System.out.println("S Pressed");
            				ballmovement.play();
            				goSouths = true;
            				break;
            			case LEFT:
-           				System.out.println("LEFT Pressed!");
+           				//System.out.println("LEFT Pressed!");
            				goWest  = true;
            				break;
            			case A:
-           				System.out.println("A Pressed!");
+           				//System.out.println("A Pressed!");
            				goWests = true;
            				break;
            			case RIGHT:
-           				System.out.println("RIGHT Pressed!");
+           				//System.out.println("RIGHT Pressed!");
            				goEast = true;
            				break;
            			case D:
-           				System.out.println("D Pressed!");
+           				//System.out.println("D Pressed!");
            				goEasts = true;
            				break;
            			case SHIFT:
-           				System.out.println("SHIFT Pressed!");
+           				//System.out.println("SHIFT Pressed!");
            				running = true;
            				break;
         		}
@@ -365,7 +370,7 @@ public class Main extends Application
         timer.start();
 	}
 	
-	//Main
+	//Main method, runs our game for us.
 	public static void main(String[] args)
 	{
 		launch();
@@ -397,7 +402,7 @@ public class Main extends Application
 			ballmovements.stop();
 			ball.relocate(mainScene.getWidth()/2-ball.getRadius(), mainScene.getHeight()/2-ball.getRadius()/2f);
 			ball.vertical = Math.abs(ball.vertical);
-			System.out.println("Red team scored!");
+			//System.out.println("Red team scored!");
 			goalSound();
 			reset();
 		}
@@ -410,7 +415,7 @@ public class Main extends Application
 			ballmovements.stop();
 			ball.relocate(mainScene.getWidth()/2-ball.getRadius(), mainScene.getHeight()/2-ball.getRadius()/2f);
 			ball.vertical = Math.abs(ball.vertical);
-			System.out.println("Blue team Scored!");
+			//System.out.println("Blue team Scored!");
 			goalSound();
 			reset();
 		}
@@ -418,7 +423,7 @@ public class Main extends Application
 		// Ball hits PlayerCar
 		if(playerintersect.getBoundsInLocal().getWidth() != -1)
 		{
-			System.out.println("Red team touched the ball!");
+			//System.out.println("Red team touched the ball!");
 			ball.hitVertical();
 			kickOff = true;
 			redTouched = true;
@@ -427,7 +432,7 @@ public class Main extends Application
 		//Ball hits OpponentCar
 		if(opponentintersect.getBoundsInLocal().getWidth() != -1)
 		{
-			System.out.println("Blue team touched the ball!");
+			//System.out.println("Blue team touched the ball!");
 			ball.hitVertical();
 			kickOff = true;
 		}
@@ -486,7 +491,7 @@ public class Main extends Application
 		}
 	};
 
-	//Playercar Movement
+	//Player car Movement
 	private void movePlayerCarBy(double dx, double dy)
 	{
         if (dx == 0.0 && dy == 0.0)
@@ -512,7 +517,7 @@ public class Main extends Application
         }
 	}
 
-	//OpponentCar Movement
+	//Opponent Car Movement
 	private void moveOpponentCarBy(double dx, double dy)
 	{
         if (dx == 0.0 && dy == 0.0)
@@ -553,7 +558,7 @@ public class Main extends Application
 		playercar.relocate(mainScene.getWidth()/2-playercar.getWidth()/2f, mainScene.getHeight() - playercar.getHeight()-160);
 		opponentcar.relocate(mainScene.getX()+341, opponentcar.getHeight()+88);
 
-		System.out.println("Game has been reset!");
+		//System.out.println("Game has been reset!");
 	}
 
 	//Player win
@@ -601,6 +606,7 @@ public class Main extends Application
 		scoreboard.setPlayerscore(0);
 	}
 	
+	//game music!
 	MediaPlayer music;
 	public void music()
 	{
@@ -609,16 +615,15 @@ public class Main extends Application
 		music = new MediaPlayer(h);
 		music.play();
 	}
-
+	
+	//sound for goal
 	MediaPlayer goalSound;
 	public void goalSound()
 	{
 		String s = "sfx/goalExplosion.mp3";
 		Media h = new Media(Paths.get(s).toUri().toString());
 		goalSound = new MediaPlayer(h);
-		System.out.println("BWAHHH");
+		//System.out.println("BWAHHH");
 		goalSound.play();
 	}
 }
-
-
